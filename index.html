@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Centro de control de la Finca La Palma y el Tucán. Acceso unificado a los dashboards de huerto, fermentación, actividades y analítica. Monitoreo 24/7." />
+  <title>Centro de Control · Finca La Palma y el Tucán</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Baskervville:ital@0;1&family=Jost:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      /* Marca LP&ET */
+      --gold:   #CB9F5B;
+      --gold-d: #a98344;
+      --pink:   #ED728B;
+      --light:  #FCF7EC;
+      --beige:  #FAF9F5;
+
+      /* Fondos */
+      --dark:   #2C2D2E;
+      --dark2:  #3a3b3c;
+      --dark3:  #484949;
+      --line:   rgba(203,159,91,0.22);
+
+      /* Estados */
+      --ok:     #4ade80;
+      --warn:   #facc15;
+      --crit:   #ef4444;
+      --info:   #38bdf8;
+      --muted:  #9e9e9e;
+
+      --radius: 14px;
+      --gap:    20px;
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      background: linear-gradient(180deg, var(--dark) 0%, #1f2021 100%);
+      color: var(--light);
+      font-family: 'Jost', system-ui, sans-serif;
+      font-size: 15px;
+      line-height: 1.55;
+      min-height: 100vh;
+    }
+    a { color: inherit; text-decoration: none; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: var(--dark2); }
+    ::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 4px; }
+
+    /* ── HEADER ───────────────────────────── */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 200;
+      background: rgba(28,29,30,0.92);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--line);
+    }
+    .header-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 18px var(--gap);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .brand h1 {
+      font-family: 'Baskervville', serif;
+      font-size: 1.45rem;
+      font-weight: 400;
+      letter-spacing: 0.5px;
+      color: var(--light);
+      line-height: 1.1;
+    }
+    .brand h1 span { color: var(--gold); }
+    .brand p {
+      font-size: 0.78rem;
+      color: var(--muted);
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+    .header-meta {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+    .clock {
+      font-variant-numeric: tabular-nums;
+      font-size: 0.95rem;
+      color: var(--light);
+      letter-spacing: 0.5px;
+    }
+    .clock small { color: var(--muted); display: block; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1.4px; }
+
+    .global-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      font-size: 0.8rem;
+      letter-spacing: 0.3px;
+      background: rgba(74,222,128,0.08);
+    }
+    .global-status .dot {
+      width: 9px; height: 9px; border-radius: 50%;
+      background: var(--ok);
+      box-shadow: 0 0 0 0 rgba(74,222,128,0.6);
+      animation: pulse 2s infinite;
+    }
+    .global-status.warn { background: rgba(250,204,21,0.08); }
+    .global-status.warn .dot { background: var(--warn); animation-name: pulse-warn; }
+    .global-status.crit { background: rgba(239,68,68,0.08); }
+    .global-status.crit .dot { background: var(--crit); animation-name: pulse-crit; }
+
+    @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(74,222,128,0.5);} 70% { box-shadow: 0 0 0 8px rgba(74,222,128,0);} 100% { box-shadow: 0 0 0 0 rgba(74,222,128,0);} }
+    @keyframes pulse-warn { 0% { box-shadow: 0 0 0 0 rgba(250,204,21,0.5);} 70% { box-shadow: 0 0 0 8px rgba(250,204,21,0);} 100% { box-shadow: 0 0 0 0 rgba(250,204,21,0);} }
+    @keyframes pulse-crit { 0% { box-shadow: 0 0 0 0 rgba(239,68,68,0.5);} 70% { box-shadow: 0 0 0 10px rgba(239,68,68,0);} 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0);} }
+
+    /* ── PAGE ──────────────────────────── */
+    .page { max-width: 1400px; margin: 0 auto; padding: 30px var(--gap) 60px; }
+
+    /* Hero KPIs */
+    .hero {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--gap);
+      margin-bottom: 30px;
+    }
+    .kpi {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .kpi:hover { transform: translateY(-2px); border-color: var(--gold); }
+    .kpi h4 { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1.4px; margin-bottom: 8px; font-weight: 500; }
+    .kpi .value { font-family: 'Baskervville', serif; font-size: 1.9rem; color: var(--light); }
+    .kpi .value small { font-size: 0.75rem; color: var(--gold); margin-left: 6px; font-family: 'Jost', sans-serif; }
+    .kpi .meta { font-size: 0.75rem; color: var(--muted); margin-top: 4px; }
+
+    /* Section title */
+    .section-title {
+      font-family: 'Baskervville', serif;
+      font-size: 1.5rem;
+      color: var(--light);
+      margin-bottom: 6px;
+      font-weight: 400;
+    }
+    .section-sub {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 18px;
+    }
+    .section-sub strong { color: var(--gold); font-weight: 500; }
+
+    /* Dashboard cards grid */
+    .dash-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+      gap: var(--gap);
+      margin-bottom: 36px;
+    }
+    .dcard {
+      background: var(--dark2);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+    }
+    .dcard::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--accent, var(--gold));
+      opacity: 0.7;
+    }
+    .dcard:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(0,0,0,0.35); border-color: var(--accent, var(--gold)); }
+
+    .dcard .head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .dcard .icon {
+      width: 44px; height: 44px;
+      border-radius: 10px;
+      background: rgba(203,159,91,0.12);
+      display: grid;
+      place-items: center;
+      font-size: 1.4rem;
+    }
+    .dcard h3 {
+      font-family: 'Baskervville', serif;
+      font-size: 1.2rem;
+      color: var(--light);
+      font-weight: 400;
+      line-height: 1.2;
+    }
+    .dcard .desc {
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 500;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      background: rgba(74,222,128,0.12);
+      color: var(--ok);
+      border: 1px solid rgba(74,222,128,0.3);
+      white-space: nowrap;
+    }
+    .badge .b-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .badge.checking { background: rgba(56,189,248,0.12); color: var(--info); border-color: rgba(56,189,248,0.3); }
+    .badge.warn { background: rgba(250,204,21,0.12); color: var(--warn); border-color: rgba(250,204,21,0.3); }
+    .badge.crit { background: rgba(239,68,68,0.12); color: var(--crit); border-color: rgba(239,68,68,0.3); }
+    .badge.local { background: rgba(158,158,158,0.12); color: var(--muted); border-color: rgba(158,158,158,0.3); }
+    .badge.soon { background: rgba(237,114,139,0.12); color: var(--pink); border-color: rgba(237,114,139,0.3); }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      padding: 12px;
+      background: rgba(0,0,0,0.18);
+      border-radius: 10px;
+      font-size: 0.78rem;
+    }
+    .metrics .m { display: flex; flex-direction: column; }
+    .metrics .m span { color: var(--muted); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 1px; }
+    .metrics .m strong { color: var(--light); font-weight: 500; font-size: 0.95rem; font-family: 'Baskervville', serif; }
+
+    .dcard .actions {
+      display: flex;
+      gap: 8px;
+      margin-top: auto;
+    }
+    .btn {
+      flex: 1;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 500;
+      letter-spacing: 0.3px;
+      text-align: center;
+      cursor: pointer;
+      border: 1px solid var(--gold);
+      background: var(--gold);
+      color: var(--dark);
+      transition: background 0.2s, transform 0.15s;
+    }
+    .btn:hover { background: var(--gold-d); border-color: var(--gold-d); transform: translateY(-1px); }
+    .btn.ghost {
+      background: transparent;
+      color: var(--gold);
+    }
+    .btn.ghost:hover { background: rgba(203,159,91,0.12); color: var(--light); }
+    .btn[disabled] { opacity: 0.35; cursor: not-allowed; }
+
+    /* Color accents per card */
+    .dcard.huerto { --accent: #4ade80; }
+    .dcard.huerto .icon { background: rgba(74,222,128,0.12); }
+    .dcard.ferm { --accent: #ED728B; }
+    .dcard.ferm .icon { background: rgba(237,114,139,0.12); }
+    .dcard.tareas { --accent: #38bdf8; }
+    .dcard.tareas .icon { background: rgba(56,189,248,0.12); }
+    .dcard.analytics { --accent: #CB9F5B; }
+    .dcard.inventario { --accent: #a855f7; }
+    .dcard.inventario .icon { background: rgba(168,85,247,0.12); }
+    .dcard.clima { --accent: #38bdf8; }
+    .dcard.clima .icon { background: rgba(56,189,248,0.12); }
+    .dcard.animales { --accent: #facc15; }
+    .dcard.animales .icon { background: rgba(250,204,21,0.12); }
+
+    /* 24h panel */
+    .panel-24h {
+      background: var(--dark2);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 26px;
+      margin-bottom: 30px;
+    }
+    .panel-24h .head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .panel-24h h2 {
+      font-family: 'Baskervville', serif;
+      font-size: 1.35rem;
+      font-weight: 400;
+      color: var(--light);
+    }
+    .panel-24h h2 small { font-size: 0.7rem; color: var(--gold); margin-left: 8px; text-transform: uppercase; letter-spacing: 1.4px; font-family: 'Jost', sans-serif; }
+    .timeline {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 6px;
+      max-height: 320px;
+      overflow-y: auto;
+    }
+    .ev {
+      display: grid;
+      grid-template-columns: 90px 110px 1fr auto;
+      gap: 14px;
+      align-items: center;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: rgba(0,0,0,0.18);
+      font-size: 0.83rem;
+      transition: background 0.2s;
+    }
+    .ev:hover { background: rgba(0,0,0,0.3); }
+    .ev .time { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 0.78rem; }
+    .ev .src { color: var(--gold); font-weight: 500; font-size: 0.78rem; }
+    .ev .msg { color: var(--light); }
+    .ev .lvl { font-size: 0.68rem; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .ev .lvl.ok { background: rgba(74,222,128,0.15); color: var(--ok); }
+    .ev .lvl.warn { background: rgba(250,204,21,0.15); color: var(--warn); }
+    .ev .lvl.crit { background: rgba(239,68,68,0.15); color: var(--crit); }
+    .ev .lvl.info { background: rgba(56,189,248,0.15); color: var(--info); }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 30px 20px;
+      border-top: 1px solid var(--line);
+      margin-top: 40px;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+    footer p + p { margin-top: 4px; }
+    footer strong { color: var(--gold); font-weight: 500; }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .hero { grid-template-columns: repeat(2, 1fr); }
+      .ev { grid-template-columns: 1fr; gap: 4px; padding: 12px; }
+      .ev .time, .ev .src { font-size: 0.72rem; }
+    }
+    @media (max-width: 540px) {
+      .hero { grid-template-columns: 1fr; }
+      .brand h1 { font-size: 1.2rem; }
+      .header-inner { padding: 14px 16px; }
+      .page { padding: 22px 14px 40px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="brand">
+      <h1>Centro de Control · <span>Finca La Palma y el Tucán</span></h1>
+      <p>Monitoreo unificado · 24/7</p>
+    </div>
+    <div class="header-meta">
+      <div class="global-status" id="globalStatus">
+        <span class="dot"></span>
+        <span id="globalStatusText">Verificando dashboards…</span>
+      </div>
+      <div class="clock">
+        <small>Hora local</small>
+        <span id="clock">--:--:--</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="page">
+
+  <!-- Hero KPIs -->
+  <section class="hero" aria-label="Indicadores generales">
+    <div class="kpi">
+      <h4>Dashboards activos</h4>
+      <div class="value" id="kpiActive">—<small>/ <span id="kpiTotal">—</span></small></div>
+      <div class="meta" id="kpiActiveMeta">Verificando…</div>
+    </div>
+    <div class="kpi">
+      <h4>Sensores en línea</h4>
+      <div class="value" id="kpiSensors">9<small>activos</small></div>
+      <div class="meta">5 suelo · 1 outdoor · 1 indoor · 1 lluvia · 1 gateway</div>
+    </div>
+    <div class="kpi">
+      <h4>Tareas en curso</h4>
+      <div class="value" id="kpiTasks">82<small>totales</small></div>
+      <div class="meta">Equipo de huerta — Supabase live</div>
+    </div>
+    <div class="kpi">
+      <h4>Última verificación</h4>
+      <div class="value" id="kpiCheck">—</div>
+      <div class="meta">Auto-refresh cada 60 s</div>
+    </div>
+  </section>
+
+  <!-- Dashboards principales -->
+  <h2 class="section-title">Dashboards de la finca</h2>
+  <p class="section-sub">Acceso unificado a los <strong>tableros operativos</strong>. El estado se verifica automáticamente.</p>
+
+  <section class="dash-grid" id="dashGrid">
+    <!-- Las cards se renderizan dinámicamente desde el array DASHBOARDS -->
+  </section>
+
+  <!-- Bitácora 24h -->
+  <section class="panel-24h">
+    <div class="head">
+      <h2>Bitácora 24 horas <small>· últimas verificaciones</small></h2>
+      <span class="badge checking" id="logCount"><span class="b-dot"></span> 0 eventos</span>
+    </div>
+    <div class="timeline" id="timeline">
+      <div class="ev">
+        <span class="time">--:--</span>
+        <span class="src">Sistema</span>
+        <span class="msg">Esperando primera verificación…</span>
+        <span class="lvl info">info</span>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <p>Centro de Control de la Finca · <strong>La Palma y el Tucán</strong></p>
+  <p>Hecho con cuidado por el Cerebro #1 · Auto-refresh cada 60 s · <span id="version">v1.0</span></p>
+</footer>
+
+<script>
+/* ==========================================================
+   Dashboard General Finca LP&ET — JS
+   ========================================================== */
+
+// Lista maestra de dashboards. Para añadir uno nuevo en el futuro,
+// solo añadir un objeto aquí.
+const DASHBOARDS = [
+  {
+    id: 'huerto',
+    icon: '🌱',
+    title: 'Huerto Inteligente',
+    desc: 'Sensores Ecowitt: humedad de suelo (5 canales), temperatura, lluvia y batería en tiempo real.',
+    url: 'https://jbenavides-dotcom.github.io/huerto-dashboard/',
+    css: 'huerto',
+    metrics: [
+      { label: 'Gateway',   value: '—', id: 'm-huerto-status' },
+      { label: 'Último dato',value: '—', id: 'm-huerto-last' }
+    ],
+    check: 'ecowitt'
+  },
+  {
+    id: 'ferm',
+    icon: '🧪',
+    title: 'Laboratorio de Fermentación',
+    desc: 'Tanques de fermentación Katherine: pH, °Brix, °C de los 5 protocolos LPX, BIW, NO, CSP, BNX.',
+    url: 'https://jbenavides-dotcom.github.io/dashboard-fermentacion/',
+    fallbackUrl: '../dashboard-fermentacion/index.html',
+    css: 'ferm',
+    metrics: [
+      { label: 'Protocolos', value: '5 activos' },
+      { label: 'Tanques',    value: '12 monitor.' }
+    ],
+    check: 'fetch'
+  },
+  {
+    id: 'tareas',
+    icon: '✅',
+    title: 'Actividades del Equipo',
+    desc: 'Streamlit + Supabase: 82 tareas, 7 estados, vista Kanban, panel del día y línea de tiempo.',
+    url: 'https://huerta-lpet-dashboard-ajwgtqv2pv4nux5letsibx.streamlit.app/',
+    css: 'tareas',
+    metrics: [
+      { label: 'Tareas',    value: '82' },
+      { label: 'Equipo',    value: '7 personas' }
+    ],
+    check: 'fetch'
+  },
+  {
+    id: 'animales',
+    icon: '🐓',
+    title: 'Inventario Animal',
+    desc: 'Inventario, compras/ventas, salud (vacunas), costos operativos y producción de huevos.',
+    url: 'https://jbenavides-dotcom.github.io/inventario-animales/',
+    css: 'animales',
+    metrics: [
+      { label: 'Módulos', value: '5 secciones' },
+      { label: 'Backend', value: 'Supabase' }
+    ],
+    check: 'fetch'
+  }
+];
+
+const grid = document.getElementById('dashGrid');
+const timelineEl = document.getElementById('timeline');
+const events = [];
+
+function badgeFor(state, label) {
+  const txt = (s, def) => label || def;
+  switch (state) {
+    case 'checking': return `<span class="badge checking"><span class="b-dot"></span>${txt('checking','verificando…')}</span>`;
+    case 'online':   return `<span class="badge"><span class="b-dot"></span>${txt('online','online')}</span>`;
+    case 'warn':     return `<span class="badge warn"><span class="b-dot"></span>${txt('warn','datos viejos')}</span>`;
+    case 'offline':  return `<span class="badge crit"><span class="b-dot"></span>${txt('offline','sin datos')}</span>`;
+    case 'local':    return `<span class="badge local"><span class="b-dot"></span>${txt('local','local')}</span>`;
+    case 'soon':     return `<span class="badge soon"><span class="b-dot"></span>${txt('soon','próximo')}</span>`;
+    default:         return `<span class="badge local"><span class="b-dot"></span>—</span>`;
+  }
+}
+
+function renderCards() {
+  grid.innerHTML = DASHBOARDS.map(d => {
+    const initialState = d.check === 'soon' ? 'soon'
+                       : d.check === 'local' ? 'local'
+                       : 'checking';
+    const openBtn = d.url && d.url !== '#'
+      ? `<a class="btn" href="${d.url}" target="_blank" rel="noopener">Abrir dashboard ↗</a>`
+      : `<button class="btn" disabled>Próximamente</button>`;
+    return `
+      <article class="dcard ${d.css}" id="card-${d.id}">
+        <div class="head">
+          <div style="display:flex;gap:12px;align-items:center;">
+            <div class="icon">${d.icon}</div>
+            <h3>${d.title}</h3>
+          </div>
+          <div id="badge-${d.id}">${badgeFor(initialState)}</div>
+        </div>
+        <p class="desc">${d.desc}</p>
+        <div class="metrics">
+          ${d.metrics.map(m => `<div class="m"><span>${m.label}</span><strong${m.id ? ` id="${m.id}"` : ''}>${m.value}</strong></div>`).join('')}
+        </div>
+        <div class="actions">
+          ${openBtn}
+        </div>
+      </article>
+    `;
+  }).join('');
+}
+
+/* ── Healthcheck ──────────────────────────────────────────
+   Como cross-origin con fetch normal está limitado por CORS,
+   usamos un truco: cargar un <img> apuntando al favicon de la URL.
+   Si carga → el dominio responde. Si error → caído.
+   Es heurístico pero suficiente para "está vivo o no".
+*/
+/* Check específico para Ecowitt vía webhook proxy en n8n
+   (NO se exponen keys en el cliente). Si el webhook no responde,
+   el badge cae a 'sin datos'. */
+const ECOWITT_PROXY = 'https://jhona.app.n8n.cloud/webhook/ecowitt-status';
+async function checkEcowitt() {
+  try {
+    const res  = await fetch(ECOWITT_PROXY, { credentials: 'omit' });
+    if (!res.ok) throw new Error('proxy ' + res.status);
+    const data = await res.json();
+    const status = data.device_status || '';
+    const last   = parseInt(data.last_update_time || '0', 10) * 1000;
+    const ageMin = last ? Math.floor((Date.now() - last) / 60000) : null;
+    return { status, last, ageMin };
+  } catch (e) {
+    return { status: 'error', last: 0, ageMin: null, error: String(e) };
+  }
+}
+
+function fmtAge(min) {
+  if (min == null) return '—';
+  if (min < 60) return `hace ${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `hace ${h} h`;
+  return `hace ${Math.floor(h / 24)} días`;
+}
+
+function checkUrl(d) {
+  return new Promise((resolve) => {
+    if (d.check === 'soon')  return resolve('soon');
+    if (d.check === 'local') return resolve('local');
+    if (d.check === 'ecowitt') {
+      checkEcowitt().then(r => {
+        const elS = document.getElementById('m-huerto-status');
+        const elL = document.getElementById('m-huerto-last');
+        if (elS) elS.textContent = r.status || '—';
+        if (elL) elL.textContent = fmtAge(r.ageMin);
+        if (r.status === 'Offline' || r.ageMin == null || r.ageMin > 60) {
+          // Re-render badge con label específico
+          const card = document.getElementById('badge-' + d.id);
+          if (card) card.innerHTML = badgeFor('offline', r.ageMin == null ? 'sin datos' : `sin datos · ${fmtAge(r.ageMin)}`);
+          return resolve('offline');
+        }
+        if (r.ageMin > 15) {
+          const card = document.getElementById('badge-' + d.id);
+          if (card) card.innerHTML = badgeFor('warn', `datos viejos · ${fmtAge(r.ageMin)}`);
+          return resolve('warn');
+        }
+        const card = document.getElementById('badge-' + d.id);
+        if (card) card.innerHTML = badgeFor('online', `en línea · ${fmtAge(r.ageMin)}`);
+        resolve('online');
+      });
+      return;
+    }
+    try {
+      const u = new URL(d.url, location.href);
+      const probe = u.origin + '/favicon.ico?cb=' + Date.now();
+      const img = new Image();
+      const t0 = performance.now();
+      const timeout = setTimeout(() => { img.src = ''; resolve('offline'); }, 6000);
+      img.onload  = () => { clearTimeout(timeout); resolve(performance.now() - t0 > 3500 ? 'warn' : 'online'); };
+      img.onerror = () => {
+        clearTimeout(timeout);
+        // Algunos servicios no exponen favicon pero sí responden — si tardó poco, asumir online.
+        resolve(performance.now() - t0 < 1500 ? 'online' : 'offline');
+      };
+      img.src = probe;
+    } catch (e) {
+      resolve('offline');
+    }
+  });
+}
+
+function logEvent(level, source, message) {
+  const now = new Date();
+  const time = now.toTimeString().slice(0, 8);
+  events.unshift({ time, source, message, level });
+  if (events.length > 60) events.pop();
+  renderTimeline();
+}
+
+function renderTimeline() {
+  if (!events.length) return;
+  timelineEl.innerHTML = events.map(e => `
+    <div class="ev">
+      <span class="time">${e.time}</span>
+      <span class="src">${e.source}</span>
+      <span class="msg">${e.message}</span>
+      <span class="lvl ${e.level}">${e.level}</span>
+    </div>
+  `).join('');
+  document.getElementById('logCount').innerHTML = `<span class="b-dot"></span> ${events.length} evento${events.length === 1 ? '' : 's'}`;
+}
+
+async function runHealthcheck() {
+  const results = await Promise.all(DASHBOARDS.map(async d => {
+    const state = await checkUrl(d);
+    // checkEcowitt ya seteó su badge con label específico — no sobrescribir
+    if (d.check !== 'ecowitt') {
+      document.getElementById('badge-' + d.id).innerHTML = badgeFor(state);
+    }
+    return { id: d.id, title: d.title, state };
+  }));
+
+  // KPIs
+  const onlineCount = results.filter(r => r.state === 'online' || r.state === 'warn' || r.state === 'local').length;
+  const total = results.filter(r => r.state !== 'soon').length;
+  document.getElementById('kpiActive').innerHTML = `${onlineCount}<small>/ <span>${total}</span></small>`;
+  document.getElementById('kpiTotal').textContent = total;
+  document.getElementById('kpiCheck').textContent = new Date().toTimeString().slice(0, 5);
+  document.getElementById('kpiActiveMeta').textContent = onlineCount === total ? 'Todos respondiendo' : `${total - onlineCount} sin respuesta`;
+
+  // Estado global
+  const gs = document.getElementById('globalStatus');
+  const gst = document.getElementById('globalStatusText');
+  const offline = results.filter(r => r.state === 'offline');
+  const warn    = results.filter(r => r.state === 'warn');
+  gs.classList.remove('warn', 'crit');
+  if (offline.length) {
+    gs.classList.add('crit');
+    gst.textContent = `${offline.length} dashboard(s) caído(s)`;
+    offline.forEach(r => logEvent('crit', r.title, 'No responde — revisar deploy/servicio'));
+  } else if (warn.length) {
+    gs.classList.add('warn');
+    gst.textContent = `${warn.length} respondiendo lento`;
+    warn.forEach(r => logEvent('warn', r.title, 'Latencia elevada en healthcheck'));
+  } else {
+    gst.textContent = 'Todos los sistemas operativos';
+    logEvent('ok', 'Healthcheck', `${onlineCount}/${total} dashboards en línea`);
+  }
+}
+
+/* ── Reloj ─────────────────────────────────────────────── */
+function tickClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent = now.toTimeString().slice(0, 8);
+}
+
+/* ── Init ──────────────────────────────────────────────── */
+renderCards();
+tickClock();
+setInterval(tickClock, 1000);
+runHealthcheck();
+setInterval(runHealthcheck, 60_000);
+</script>
+
+</body>
+</html>

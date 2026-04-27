@@ -1,0 +1,11 @@
+.DS_Store
+Thumbs.db
+node_modules/
+.env
+.env.local
+healthcheck.log
+*.log
+# Scripts con secretos — nunca commitear
+*.py
+secrets.*
+credentials.*
