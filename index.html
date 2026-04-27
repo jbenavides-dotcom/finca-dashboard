@@ -493,14 +493,14 @@ const DASHBOARDS = [
     id: 'tareas',
     icon: '✅',
     title: 'Actividades del Equipo',
-    desc: 'Streamlit + Supabase: 82 tareas, 7 estados, vista Kanban, panel del día y línea de tiempo.',
+    desc: 'Streamlit + Supabase: gestión de tareas, vista Kanban, panel del día y línea de tiempo. Requiere login.',
     url: 'https://huerta-lpet-dashboard-ajwgtqv2pv4nux5letsibx.streamlit.app/',
     css: 'tareas',
     metrics: [
-      { label: 'Tareas',    value: '82' },
-      { label: 'Equipo',    value: '7 personas' }
+      { label: 'Por iniciar',  value: '—', id: 'm-tareas-pendientes' },
+      { label: 'En proceso',   value: '—', id: 'm-tareas-proceso' }
     ],
-    check: 'fetch'
+    check: 'tareas'
   },
   {
     id: 'animales',
@@ -569,10 +569,9 @@ function renderCards() {
    Si carga → el dominio responde. Si error → caído.
    Es heurístico pero suficiente para "está vivo o no".
 */
-/* Check específico para Ecowitt vía webhook proxy en n8n
-   (NO se exponen keys en el cliente). Si el webhook no responde,
-   el badge cae a 'sin datos'. */
+/* === Webhook proxies en n8n (sin secretos en el cliente) === */
 const ECOWITT_PROXY = 'https://jhona.app.n8n.cloud/webhook/ecowitt-status';
+const TAREAS_PROXY  = 'https://jhona.app.n8n.cloud/webhook/tareas-status';
 async function checkEcowitt() {
   try {
     const res  = await fetch(ECOWITT_PROXY, { credentials: 'omit' });
@@ -595,10 +594,46 @@ function fmtAge(min) {
   return `hace ${Math.floor(h / 24)} días`;
 }
 
+/* Check de Actividades: consulta el webhook proxy n8n que cuenta tareas
+   por estado en Supabase. Si el webhook aún no existe, marca "🔒 requiere login". */
+async function checkTareas() {
+  try {
+    const res  = await fetch(TAREAS_PROXY, { credentials: 'omit' });
+    if (!res.ok) throw new Error('proxy ' + res.status);
+    const data = await res.json();
+    return {
+      pendientes: data.por_iniciar ?? data.pendientes ?? null,
+      proceso:    data.en_proceso ?? null,
+      finalizadas:data.finalizado ?? data.finalizadas ?? null,
+      total:      data.total ?? null
+    };
+  } catch (e) {
+    return { error: String(e) };
+  }
+}
+
 function checkUrl(d) {
   return new Promise((resolve) => {
     if (d.check === 'soon')  return resolve('soon');
     if (d.check === 'local') return resolve('local');
+    if (d.check === 'tareas') {
+      checkTareas().then(r => {
+        const elP = document.getElementById('m-tareas-pendientes');
+        const elE = document.getElementById('m-tareas-proceso');
+        const card = document.getElementById('badge-' + d.id);
+        if (r.error) {
+          if (elP) elP.textContent = '🔒';
+          if (elE) elE.textContent = 'login';
+          if (card) card.innerHTML = badgeFor('warn', 'requiere login');
+          return resolve('warn');
+        }
+        if (elP) elP.textContent = r.pendientes ?? '—';
+        if (elE) elE.textContent = r.proceso ?? '—';
+        if (card) card.innerHTML = badgeFor('online', `${r.total ?? '?'} tareas activas`);
+        resolve('online');
+      });
+      return;
+    }
     if (d.check === 'ecowitt') {
       checkEcowitt().then(r => {
         const elS = document.getElementById('m-huerto-status');
@@ -665,8 +700,8 @@ function renderTimeline() {
 async function runHealthcheck() {
   const results = await Promise.all(DASHBOARDS.map(async d => {
     const state = await checkUrl(d);
-    // checkEcowitt ya seteó su badge con label específico — no sobrescribir
-    if (d.check !== 'ecowitt') {
+    // Los checks custom ya setearon su badge con label específico — no sobrescribir
+    if (d.check !== 'ecowitt' && d.check !== 'tareas') {
       document.getElementById('badge-' + d.id).innerHTML = badgeFor(state);
     }
     return { id: d.id, title: d.title, state };
