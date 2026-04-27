@@ -470,8 +470,8 @@ const DASHBOARDS = [
     url: 'https://jbenavides-dotcom.github.io/huerto-dashboard/',
     css: 'huerto',
     metrics: [
-      { label: 'Gateway',   value: '—', id: 'm-huerto-status' },
-      { label: 'Último dato',value: '—', id: 'm-huerto-last' }
+      { label: 'Outdoor',     value: '—', id: 'm-huerto-temp' },
+      { label: 'Suelo (prom)', value: '—', id: 'm-huerto-soil' }
     ],
     check: 'ecowitt'
   },
@@ -574,13 +574,21 @@ const ECOWITT_PROXY = 'https://jhona.app.n8n.cloud/webhook/ecowitt-status';
 const TAREAS_PROXY  = 'https://jhona.app.n8n.cloud/webhook/tareas-status';
 async function checkEcowitt() {
   try {
-    const res  = await fetch(ECOWITT_PROXY, { credentials: 'omit' });
+    const res  = await fetch(ECOWITT_PROXY + '?_=' + Date.now(), { credentials: 'omit', cache: 'no-store' });
     if (!res.ok) throw new Error('proxy ' + res.status);
     const data = await res.json();
     const status = data.device_status || '';
     const last   = parseInt(data.last_update_time || '0', 10) * 1000;
     const ageMin = last ? Math.floor((Date.now() - last) / 60000) : null;
-    return { status, last, ageMin };
+    // Convertir °F → °C
+    const tempF = data.outdoor_temp ? parseFloat(data.outdoor_temp) : null;
+    const tempC = tempF != null ? Math.round((tempF - 32) * 5 / 9 * 10) / 10 : null;
+    const hum   = data.outdoor_humidity ?? null;
+    // Promedio de los 5 canales de suelo
+    const soils = ['soil_ch1','soil_ch2','soil_ch3','soil_ch4','soil_ch5']
+      .map(k => parseFloat(data[k])).filter(v => !isNaN(v));
+    const soilAvg = soils.length ? Math.round(soils.reduce((a,b)=>a+b,0)/soils.length) : null;
+    return { status, last, ageMin, tempC, hum, soilAvg };
   } catch (e) {
     return { status: 'error', last: 0, ageMin: null, error: String(e) };
   }
@@ -637,14 +645,12 @@ function checkUrl(d) {
     }
     if (d.check === 'ecowitt') {
       checkEcowitt().then(r => {
-        const elS = document.getElementById('m-huerto-status');
-        const elL = document.getElementById('m-huerto-last');
-        if (elS) elS.textContent = r.status || '—';
-        if (elL) elL.textContent = fmtAge(r.ageMin);
-        // Umbrales realistas: gateway nominal 5 min, pero la API Ecowitt
-        // suele propagar con 10-20 min de retraso → ajustamos para no
-        // alarmar mientras el gateway esté Online.
+        const elT = document.getElementById('m-huerto-temp');
+        const elS = document.getElementById('m-huerto-soil');
         const card = document.getElementById('badge-' + d.id);
+        // Métricas reales (siempre que haya datos)
+        if (elT) elT.textContent = (r.tempC != null && r.hum != null) ? `${r.tempC}°C · ${r.hum}%` : '—';
+        if (elS) elS.textContent = (r.soilAvg != null) ? `${r.soilAvg}%` : '—';
         if (r.status === 'Offline' || r.ageMin == null) {
           if (card) card.innerHTML = badgeFor('offline', r.ageMin == null ? 'sin datos' : `sin datos · ${fmtAge(r.ageMin)}`);
           return resolve('offline');
@@ -654,10 +660,10 @@ function checkUrl(d) {
           return resolve('offline');
         }
         if (r.ageMin > 30) {
-          if (card) card.innerHTML = badgeFor('warn', `datos viejos · ${fmtAge(r.ageMin)}`);
+          if (card) card.innerHTML = badgeFor('warn', `actualizado · hace ${r.ageMin} min`);
           return resolve('warn');
         }
-        if (card) card.innerHTML = badgeFor('online', `en línea · ${fmtAge(r.ageMin)}`);
+        if (card) card.innerHTML = badgeFor('online', `actualizado · hace ${r.ageMin} min`);
         resolve('online');
       });
       return;
