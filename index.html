@@ -419,7 +419,7 @@
     <div class="kpi">
       <h4>Última verificación</h4>
       <div class="value" id="kpiCheck">—</div>
-      <div class="meta">Auto-refresh cada 60 s</div>
+      <div class="meta">Auto-refresh cada 5 min</div>
     </div>
   </section>
 
@@ -641,18 +641,22 @@ function checkUrl(d) {
         const elL = document.getElementById('m-huerto-last');
         if (elS) elS.textContent = r.status || '—';
         if (elL) elL.textContent = fmtAge(r.ageMin);
-        if (r.status === 'Offline' || r.ageMin == null || r.ageMin > 60) {
-          // Re-render badge con label específico
-          const card = document.getElementById('badge-' + d.id);
+        // Umbrales realistas: gateway nominal 5 min, pero la API Ecowitt
+        // suele propagar con 10-20 min de retraso → ajustamos para no
+        // alarmar mientras el gateway esté Online.
+        const card = document.getElementById('badge-' + d.id);
+        if (r.status === 'Offline' || r.ageMin == null) {
           if (card) card.innerHTML = badgeFor('offline', r.ageMin == null ? 'sin datos' : `sin datos · ${fmtAge(r.ageMin)}`);
           return resolve('offline');
         }
-        if (r.ageMin > 15) {
-          const card = document.getElementById('badge-' + d.id);
+        if (r.ageMin > 90) {
+          if (card) card.innerHTML = badgeFor('offline', `sin datos · ${fmtAge(r.ageMin)}`);
+          return resolve('offline');
+        }
+        if (r.ageMin > 30) {
           if (card) card.innerHTML = badgeFor('warn', `datos viejos · ${fmtAge(r.ageMin)}`);
           return resolve('warn');
         }
-        const card = document.getElementById('badge-' + d.id);
         if (card) card.innerHTML = badgeFor('online', `en línea · ${fmtAge(r.ageMin)}`);
         resolve('online');
       });
@@ -747,7 +751,8 @@ renderCards();
 tickClock();
 setInterval(tickClock, 1000);
 runHealthcheck();
-setInterval(runHealthcheck, 60_000);
+// Refresco cada 5 min (gateway envía datos cada ~5 min nominal)
+setInterval(runHealthcheck, 5 * 60 * 1000);
 </script>
 
 </body>
