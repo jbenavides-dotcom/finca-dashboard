@@ -298,6 +298,8 @@
     .dcard.clima .icon { background: rgba(56,189,248,0.12); }
     .dcard.animales { --accent: #facc15; }
     .dcard.animales .icon { background: rgba(250,204,21,0.12); }
+    .dcard.hotel { --accent: #ED728B; }
+    .dcard.hotel .icon { background: rgba(237,114,139,0.12); }
 
     /* 24h panel */
     .panel-24h {
@@ -512,6 +514,19 @@ const DASHBOARDS = [
     metrics: [
       { label: 'Módulos', value: '5 secciones' },
       { label: 'Backend', value: 'Supabase' }
+    ],
+    check: 'fetch'
+  },
+  {
+    id: 'hotel',
+    icon: '🏨',
+    title: 'Dashboard Hotel LP&ET',
+    desc: 'Centro operativo Hotel: KPIs ejecutivos, ventas Cloudbeds, customer journey, Bitrix CRM, Search Console y plan Ads/SEO. Auto-regenera cada hora.',
+    url: 'https://104-236-89-224.sslip.io/',
+    css: 'hotel',
+    metrics: [
+      { label: 'Docs vivos', value: '14 páginas' },
+      { label: 'Refresh',    value: 'cada hora' }
     ],
     check: 'fetch'
   }
