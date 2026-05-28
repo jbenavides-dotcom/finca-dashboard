@@ -480,16 +480,14 @@ const DASHBOARDS = [
   {
     id: 'ferm',
     icon: '🧪',
-    title: 'Laboratorio de Fermentación',
-    desc: 'Tanques de fermentación Katherine: pH, °Brix, °C de los 5 protocolos LPX, BIW, NO, CSP, BNX.',
-    url: 'https://jbenavides-dotcom.github.io/dashboard-fermentacion/',
-    fallbackUrl: '../dashboard-fermentacion/index.html',
+    title: 'Fermentación y Secado · CraftLab TV',
+    desc: 'Monitoreo en vivo: fermentación en el tanque (pH, °Brix, ORP, °C) y secado en marquesina (temp, humedad, VPD). 6 tanques, bilingüe ES/EN con glosario. Protocolos de Katherine (LPX, BIW, NO, CSP, BNX).',
+    url: 'https://craftlab-tv.vercel.app/',
     css: 'ferm',
     metrics: [
-      { label: 'Protocolos', value: '5 activos' },
-      { label: 'Tanques',    value: '12 monitor.' }
-    ],
-    check: 'fetch'
+      { label: 'Fases',  value: 'Ferm + Secado' },
+      { label: 'Idioma', value: 'ES / EN' }
+    ]
   },
   {
     id: 'tareas',
