@@ -300,6 +300,8 @@
     .dcard.animales .icon { background: rgba(250,204,21,0.12); }
     .dcard.hotel { --accent: #ED728B; }
     .dcard.hotel .icon { background: rgba(237,114,139,0.12); }
+    .dcard.pedidos { --accent: #B8004A; }
+    .dcard.pedidos .icon { background: rgba(184,0,74,0.12); }
 
     /* 24h panel */
     .panel-24h {
@@ -488,6 +490,19 @@ const DASHBOARDS = [
       { label: 'Fases',  value: 'Ferm + Secado' },
       { label: 'Idioma', value: 'ES / EN' }
     ]
+  },
+  {
+    id: 'pedidos',
+    icon: '📋',
+    title: 'CraftLab · Pedidos',
+    desc: 'Panel del equipo de la finca: gestiona los pedidos CraftLab — confirmar, asignar tanque, vincular bache (genera el link del cliente) y registrar updates que disparan los correos al cliente. Incluye asistente de chat. Requiere login de staff.',
+    url: 'https://craftlab-finca.vercel.app/',
+    css: 'pedidos',
+    metrics: [
+      { label: 'Pedidos', value: 'CraftLab + FB' },
+      { label: 'Acceso',  value: 'Login staff' }
+    ],
+    check: 'fetch'
   },
   {
     id: 'tareas',
