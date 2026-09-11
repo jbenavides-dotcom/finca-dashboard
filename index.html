@@ -599,7 +599,7 @@ function renderCards() {
 */
 /* === Webhook proxies en n8n (sin secretos en el cliente) === */
 const ECOWITT_PROXY = 'https://jhona123.app.n8n.cloud/webhook/ecowitt-status';
-const TAREAS_PROXY  = 'https://jhona.app.n8n.cloud/webhook/tareas-status';
+const TAREAS_PROXY  = 'https://jhona123.app.n8n.cloud/webhook/tareas-status';
 async function checkEcowitt() {
   try {
     const res  = await fetch(ECOWITT_PROXY + '?_=' + Date.now(), { credentials: 'omit', cache: 'no-store' });
@@ -784,9 +784,25 @@ function tickClock() {
 renderCards();
 tickClock();
 setInterval(tickClock, 1000);
-runHealthcheck();
-// Refresco cada 5 min (gateway envía datos cada ~5 min nominal)
-setInterval(runHealthcheck, 5 * 60 * 1000);
+/* Refresco cada 30 min. Antes eran 5 min, pero cada tick gasta una ejecución
+   de n8n (proxies Ecowitt + Tareas): una pestaña olvidada abierta se comía
+   ~288 ejecuciones al día. Además pausamos mientras la pestaña no esté visible
+   y al volver solo refrescamos si el dato ya está viejo. */
+const HEALTHCHECK_MS = 30 * 60 * 1000;
+let lastHealthcheck = 0;
+
+async function healthcheckTick(force) {
+  if (!force && document.hidden) return;                       // pestaña en segundo plano: no gastar
+  if (!force && Date.now() - lastHealthcheck < HEALTHCHECK_MS) return;
+  lastHealthcheck = Date.now();
+  await runHealthcheck();
+}
+
+healthcheckTick(true);
+setInterval(healthcheckTick, 60 * 1000);                       // el guardia decide; no dispara solo
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) healthcheckTick();                     // al volver, solo si ya venció
+});
 </script>
 
 </body>
